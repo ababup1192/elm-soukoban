@@ -86,6 +86,16 @@ updateTest =
                         |> Tuple.first
                         |> .cells
                         |> Expect.equal (Array.fromList [ Wall, Container, Me ])
+            , test "移動先:ContainerでContainerの移動先がContainerの場合、ContainerとMeは動かない" <|
+                \_ ->
+                    update (KeyDown Left)
+                        { sideCount = 3
+                        , cells = Array.fromList [ Container, Container, Me ]
+                        , baseCellPlaces = Dict.fromList []
+                        }
+                        |> Tuple.first
+                        |> .cells
+                        |> Expect.equal (Array.fromList [ Container, Container, Me ])
             , test "移動先:ContainerでContainerの移動先にマスがない場合、ContainerとMeは動かない" <|
                 \_ ->
                     update (KeyDown Left)

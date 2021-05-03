@@ -101,13 +101,13 @@ update msg model =
                             0
 
                 nextMyPoint =
-                    move { direction = direction, sideCount = model.sideCount, current = current } model.cells
+                    move { direction = direction, sideCount = model.sideCount, current = current } model.cells Me
 
                 nextCellMaybe =
                     Array.get nextMyPoint model.cells
 
                 nextContainerPoint =
-                    move { direction = direction, sideCount = model.sideCount, current = nextMyPoint } model.cells
+                    move { direction = direction, sideCount = model.sideCount, current = nextMyPoint } model.cells Container
 
                 formerCell =
                     Maybe.withDefault Floor <| Dict.get current model.baseCellPlaces
@@ -141,8 +141,8 @@ type alias MoveArg =
     { direction : Direction, sideCount : Int, current : Int }
 
 
-move : MoveArg -> Board -> Int
-move { direction, sideCount, current } board =
+move : MoveArg -> Board -> Cell -> Int
+move { direction, sideCount, current } board cell =
     let
         destination : Int
         destination =
@@ -151,6 +151,14 @@ move { direction, sideCount, current } board =
     case Array.get destination board of
         Just Wall ->
             current
+
+        Just Container ->
+            case cell of
+                Container ->
+                    current
+
+                _ ->
+                    destination
 
         _ ->
             destination
