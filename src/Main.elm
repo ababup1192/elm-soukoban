@@ -4,7 +4,7 @@ import Array exposing (Array, indexedMap)
 import Browser
 import Browser.Events exposing (onKeyDown)
 import Dict as Dict exposing (Dict)
-import Html exposing (Html, div, img)
+import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (src, style)
 import Json.Decode as JD
 
@@ -27,8 +27,17 @@ type alias Board =
     Array Cell
 
 
+type GameStatus
+    = Play
+    | Clear
+
+
 type alias Model =
-    { sideCount : Int, cells : Board, baseCellPlaces : Dict Int Cell }
+    { gameStatus : GameStatus
+    , sideCount : Int
+    , cells : Board
+    , baseCellPlaces : Dict Int Cell
+    }
 
 
 init : ( Model, Cmd Msg )
@@ -41,11 +50,12 @@ init =
             8
 
         initialCellPlaces =
-            [ ( myPoint, Me ), ( 13, Container ) ]
+            [ ( myPoint, Me ), ( 12, Container ), ( 13, Container ) ]
 
         baseCellPlaces =
             [ ( 3, Wall )
             , ( 4, Wall )
+            , ( 5, Cord )
             , ( 10, Cord )
             ]
 
@@ -56,7 +66,8 @@ init =
                     Maybe.withDefault Floor <| Dict.get n <| Dict.fromList <| baseCellPlaces ++ initialCellPlaces
                 )
     in
-    ( { sideCount = sideCount
+    ( { gameStatus = Play
+      , sideCount = sideCount
       , cells = cells
       , baseCellPlaces = Dict.fromList baseCellPlaces
       }
@@ -115,9 +126,8 @@ update msg model =
                 setCells =
                     setCell { cell = Me, point = nextMyPoint }
                         << setCell { cell = formerCell, point = current }
-            in
-            ( { model
-                | cells =
+
+                cells =
                     if nextCellMaybe == Just Container && nextContainerPoint == nextMyPoint then
                         model.cells
 
@@ -132,6 +142,10 @@ update msg model =
 
                     else
                         setCells model.cells
+            in
+            ( { model
+                | gameStatus = judgeGameStatus model.baseCellPlaces cells
+                , cells = cells
               }
             , Cmd.none
             )
@@ -196,6 +210,27 @@ setCell { cell, point } =
     Array.set point cell
 
 
+judgeGameStatus : Dict Int Cell -> Board -> GameStatus
+judgeGameStatus baseCellPlaces board =
+    let
+        cordCellIndexs =
+            List.map (\( f, _ ) -> f) <|
+                Dict.toList <|
+                    Dict.filter (\d cell -> cell == Cord) baseCellPlaces
+
+        cordWithObjects =
+            List.map (\i -> Array.get i board) cordCellIndexs
+    in
+    if
+        List.isEmpty <|
+            List.filter (\cellMaybe -> cellMaybe /= Just Container) cordWithObjects
+    then
+        Clear
+
+    else
+        Play
+
+
 
 -- SUBSCRIPTION
 
@@ -242,7 +277,7 @@ view model =
             ]
     in
     div attrs
-        [ viewBoard model ]
+        [ viewBoard model, viewGameStatus model ]
 
 
 viewBoard : Model -> Html msg
@@ -277,6 +312,20 @@ viewCell sideLength cell =
             ]
     in
     img (src (floor cell) :: styles) []
+
+
+viewGameStatus : Model -> Html msg
+viewGameStatus model =
+    let
+        status =
+            case model.gameStatus of
+                Clear ->
+                    "ゲームクリア"
+
+                _ ->
+                    ""
+    in
+    div [] [ text status ]
 
 
 floor : Cell -> String
